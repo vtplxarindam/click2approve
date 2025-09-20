@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.3.0
+    container_name: click2approve_db
+    environment:
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: click2approve
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    container_name: click2approve_redis
+    ports:
+      - "6379:6379"
+
+  api:
+    build: .
+    container_name: click2approve_api
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DATABASE_URL=mysql+aiomysql://user:password@db/click2approve
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    volumes:
+      - ./filestorage:/filestorage
+    command: >
+      sh -c "
+        sleep 10 &&
+        alembic upgrade head &&
+        uvicorn app.main:app --host 0.0.0.0 --port 5555
+      "
+
+volumes:
+  mysql_data:

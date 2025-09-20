@@ -1,129 +1,112 @@
-![Dev build status](https://github.com/luarvic/click2approve/actions/workflows/dev-build.yml/badge.svg)
-![Prod build status](https://github.com/luarvic/click2approve/actions/workflows/prod-build.yml/badge.svg)
+# Click2Approve FastAPI Migration
 
-# Table of Contents
+This is a complete migration of the Click2Approve C# application to FastAPI (Python).
 
-1. [Click2approve specification.](#click2approve-specification)
-2. [Demo.](#demo)
-3. [How to run locally.](#how-to-run-locally)
-4. [Architecture and design decisions.](#architecture-and-design-decisions)
+## Features
 
-# Click2approve Specification
+- **Authentication & Authorization**: JWT-based authentication with refresh tokens
+- **File Management**: Upload, download, and manage documents
+- **Approval Workflow**: Submit documents for approval and track status
+- **Email Notifications**: Configurable email notifications for approval events
+- **Audit Logging**: Complete audit trail of all actions
+- **Database**: MySQL with SQLAlchemy ORM and Alembic migrations
+- **Background Tasks**: Email sending via async patterns (Celery can be added)
 
-Click2approve is a free, open-source, cross-platform document approval system with a responsive user interface that allows you to:
+## Architecture
 
-- Upload documents.
-- Send documents for approval specifying a list of approvers' email addresses.
-- Notify the requesting and approving parties via email.
-- Keep track the approval requests.
+The application follows FastAPI best practices:
 
-# Demo
+- **Pydantic Models**: Request/response validation and serialization
+- **Dependency Injection**: Services injected via FastAPI's dependency system
+- **Async/Await**: Full async support throughout the application
+- **SQLAlchemy 2.0**: Modern async ORM patterns
+- **Proper Error Handling**: Custom exceptions with appropriate HTTP status codes
 
-Please, visit [click2approve.com](https://click2approve.com/) to check how it works.
+## Key Differences from C# Version
 
-# How to Run Locally
+1. **Dependency Injection**: Converted from ASP.NET Core DI to FastAPI's dependency system
+2. **Async Patterns**: All database operations use async/await
+3. **Validation**: Pydantic models replace C# model validation attributes
+4. **Background Tasks**: Email sending uses async patterns instead of Hangfire
+5. **Configuration**: Environment-based configuration using Pydantic Settings
 
-## Prerequisites
+## Setup
 
-- You have installed the latest version of [Docker Desktop](https://docs.docker.com/get-docker/).
-- You have installed a [Git client](https://git-scm.com/downloads).
+1. **Clone and Install Dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## Getting Started
+2. **Configure Environment**:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
 
-### 1. Clone the Repository
+3. **Setup Database**:
+   ```bash
+   # Run migrations
+   alembic upgrade head
+   ```
 
-Run in terminal:
+4. **Run the Application**:
+   ```bash
+   uvicorn app.main:app --reload --port 5555
+   ```
+
+5. **Using Docker**:
+   ```bash
+   docker-compose up -d
+   ```
+
+## API Endpoints
+
+The API maintains the same endpoints as the original C# version:
+
+- **Authentication**: `/api/account/*`
+- **File Management**: `/api/file/*`
+- **Approval Requests**: `/api/request/*`
+- **Approval Tasks**: `/api/task/*`
+
+## Configuration
+
+All configuration is handled through environment variables. See `.env.example` for all available options.
+
+## Database Migrations
+
+Use Alembic for database migrations:
 
 ```bash
-git clone git@github.com:luarvic/click2approve.git
+# Create a new migration
+alembic revision --autogenerate -m "Description"
+
+# Apply migrations
+alembic upgrade head
+
+# Rollback
+alembic downgrade -1
 ```
 
-### 2. Open `click2approve` Directory
+## Testing
 
-Run in terminal:
+The application includes the same business logic and validation as the original C# version, ensuring functional equivalence.
 
-```bash
-cd click2approve
-```
+## Production Deployment
 
-### 3. Build and Run Docker Images
+For production deployment:
 
-Run in terminal:
+1. Set proper environment variables
+2. Use a production WSGI server (Gunicorn with Uvicorn workers)
+3. Configure proper database connection pooling
+4. Set up Redis for background tasks
+5. Configure email service credentials
+6. Set up file storage with proper permissions
 
-```bash
-docker compose up -d
-```
+## Migration Notes
 
-Wait until you see:
-
-```
- ✔ api                            Built
- ✔ ui                             Built
- ✔ Network click2approve_default  Created
- ✔ Container db                   Started
- ✔ Container api                  Started
- ✔ Container ui                   Started
-```
-
-### 4. Verify Running Docker Containers
-
-Run in terminal:
-
-```bash
-docker ps -a
-```
-
-Make sure all of the following containers are up and running:
-
-- `api`.
-- `db`.
-- `ui`.
-
-(Find more details about those containers below in [Architecture and design decisions](#architecture-and-design-decisions).)
-
-### 5. Open the Web Page
-
-In the web browser open [http://localhost:3333/](http://localhost:3333/).
-
-You should see a page with `click2approve` title.
-
-Welcome to the `click2approve` service! 🎉🎉🎉
-
-# Architecture and Design Decisions
-
-The application consists of the following microservices:
-
-- Client-side UI (`React TypeScript v18.2`).
-- Server-side API (`ASP.NET Core v8.0`).
-- Relational database (`MySQL 8.3.0`).
-
-All microservises are containerized with [Docker](https://docs.docker.com/).
-
-## Client-side UI
-
-It provides a graphical interface, allowing users to interact with the application via a web browser.
-
-It is written in [TypeScript](https://www.typescriptlang.org/) and uses:
-
-- [React](https://react.dev/) library;
-- [Material UI](https://mui.com/material-ui/) CSS framework;
-- [MobX](https://mobx.js.org/react-integration.html) state management framework.
-
-The build transforms the TypeScript code into a JavaScript single-page application (SPA). The `ui` container hosts [Nginx](https://www.nginx.com/) web server that returns the SPA to the users. The SPA handles HTTP requests coming from the users and interacts with the `Server-side API` microservice.
-
-## Server-side API
-
-It provides HTTP endpoints that implement business logic.
-
-It is written in [C#](https://learn.microsoft.com/en-us/dotnet/csharp/tour-of-csharp/) and uses:
-
-- [ASP.NET Core](https://dotnet.microsoft.com/en-us/apps/aspnet) framework.
-- [Entity Framework](https://learn.microsoft.com/en-us/ef/).
-- [ASP.NET Identity](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/identity) framework.
-
-The build compiles the C# code into a self-hosted web API application that handles HTTP requests coming from the UI.
-The application interacts with the relational database and the filesystem to manage user data.
-
-## Relational Database
-
-It provides the relational data storage required for system operation.
+- **Identity Framework**: Replaced with custom user management using SQLAlchemy
+- **Entity Framework**: Replaced with SQLAlchemy 2.0 async patterns
+- **Hangfire**: Replaced with async email sending (Celery can be added for complex background tasks)
+- **ASP.NET Core Features**: Converted to FastAPI equivalents while maintaining the same functionality
+- **C# Async Patterns**: Converted to Python async/await patterns
+- **Validation**: Pydantic models provide the same validation as C# model attributes
